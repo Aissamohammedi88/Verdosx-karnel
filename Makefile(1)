@@ -1,0 +1,219 @@
+# FreaxOS 2026 - Makefile
+#
+# FR : Trois cibles binaires — simulateur hébergé, tests unitaires, noyau
+#       bare-metal i386 (multiboot). Détection automatique de cargo (module
+#       Rust) et de qemu (exécution). FREAX_NO_RUST=1 force le repli C.
+# EN : Three binary targets — hosted simulator, unit tests, bare-metal i386
+#      kernel (multiboot). Auto-detects cargo (Rust module) and qemu (runs).
+#      FREAX_NO_RUST=1 forces the C fallback.
+
+CC      ?= gcc
+BUILD   := build
+DATE    := $(shell date +%Y-%m-%d)
+ZIPNAME := FreaxOS-2026-v1.0.0.zip
+
+# ---------- détections / detection ----------
+HAVE_M32 := $(shell echo 'int x;' | $(CC) -m32 -ffreestanding -x c -c - -o /dev/null 2>/dev/null && echo yes || echo no)
+CARGO    := $(shell command -v cargo 2>/dev/null)
+QEMU     := $(shell command -v qemu-system-i386 2>/dev/null)
+USE_RUST := no
+ifneq ($(CARGO),)
+ifeq ($(origin FREAX_NO_RUST),undefined)
+USE_RUST := yes
+endif
+endif
+
+# ---------- drapeaux / flags ----------
+CFLAGS    := -std=gnu11 -Wall -Wextra -Iinclude -Idesktop \
+             -DFREAX_BUILD_DATE=\"$(DATE)\"
+SIMFLAGS  := $(CFLAGS) -O2 -ffreestanding -fno-builtin -fno-stack-protector \
+             -fno-pie -mno-mmx -mno-sse
+BMFLAGS   := $(CFLAGS) -O2 -m32 -ffreestanding -fno-builtin -fno-pic -fno-pie \
+             -fno-stack-protector -mno-mmx -mno-sse -mno-80387 \
+             -fno-asynchronous-unwind-tables
+
+# ---------- sources / sources ----------
+KERNEL_C  := $(wildcard kernel/*.c)
+SHELL_C   := $(wildcard shell/*.c)
+SIM_C     := $(wildcard sim/*.c)
+TESTS_C   := $(wildcard tests/*.c)
+BM_C      := $(wildcard baremetal/*.c)
+BM_S      := $(wildcard baremetal/*.S)
+
+# cœur portable + shell / portable core + shell
+CORE_C    := $(filter-out kernel/tux_stub.c,$(KERNEL_C)) $(SHELL_C)
+# fichiers du frontend hébergé / hosted frontend files
+APP_C     := sim/hal_host.c sim/sim_main.c
+CTX_C     := sim/ctx_ucontext.c
+
+ifeq ($(USE_RUST),yes)
+RUST_LIB  := rust/freax_rust/target/release/libfreax_rust.a
+MOD_LIB   := $(RUST_LIB)
+else
+CORE_C    += kernel/tux_stub.c
+MOD_LIB   :=
+endif
+
+# FIX bare-metal : la lib Rust est compilée pour l'HÔTE (x86_64) — elle ne
+# peut pas être liée dans un noyau freestanding 32 bits. Le lien bare-metal
+# i386 utilise donc TOUJOURS le repli C kernel/tux_stub.c ; le module Rust
+# reste actif pour le simulateur et les tests hébergés.
+# EN bare-metal fix: the Rust lib is built for the HOST (x86_64) and cannot
+# be linked into a 32-bit freestanding kernel. The bare-metal link therefore
+# ALWAYS uses the C fallback kernel/tux_stub.c; the Rust module stays active
+# for the hosted simulator and tests.
+ifeq ($(USE_RUST),yes)
+BM_STUB   := kernel/tux_stub.c
+else
+BM_STUB   :=
+endif
+
+# ---------- bureau « Liquid Glass » / desktop ----------
+DESK_CORE_C    := desktop/gfx.c desktop/font8x14.c desktop/theme.c \
+                  desktop/html.c desktop/apps1.c desktop/apps2.c desktop/wm.c
+DESK_APP_C     := desktop/desktop_main.c desktop/x11_host.c
+DESK_CORE_OBJS := $(patsubst %.c,$(BUILD)/desk/%.o,$(DESK_CORE_C))
+DESK_APP_OBJS  := $(patsubst %.c,$(BUILD)/desk/%.o,$(DESK_APP_C))
+# rendu partagé avec le splash bare-metal / shared rendering with the bm splash
+BM_GFX         := desktop/gfx.c desktop/font8x14.c
+BM_GFX_OBJS    := $(patsubst %.c,$(BUILD)/bm/%.o,$(BM_GFX))
+
+CORE_OBJS := $(patsubst %.c,$(BUILD)/sim/%.o,$(CORE_C))
+CTX_OBJS  := $(patsubst %.c,$(BUILD)/sim/%.o,$(CTX_C))
+APP_OBJS  := $(patsubst %.c,$(BUILD)/sim/%.o,$(APP_C))
+TEST_OBJS := $(patsubst %.c,$(BUILD)/test/%.o,$(TESTS_C))
+BM_OBJS   := $(patsubst %.c,$(BUILD)/bm/%.o,$(CORE_C) $(BM_STUB) $(BM_C)) \
+             $(patsubst %.S,$(BUILD)/bm/%.o,$(BM_S)) $(BM_GFX_OBJS)
+
+# ---------- cibles / targets ----------
+.PHONY: all sim tests test baremetal desktop shot run run-sim smoke zip clean help
+
+all: sim test desktop $(if $(filter yes,$(HAVE_M32)),baremetal,)
+
+sim: $(BUILD)/freax-sim
+
+tests: test
+test: $(BUILD)/freax-tests
+	@echo "==> exécution des tests unitaires / running unit tests"
+	@$(BUILD)/freax-tests
+
+baremetal: $(BUILD)/freax-i386.elf
+
+desktop: $(BUILD)/freax-desktop
+
+shot: $(BUILD)/freax-desktop
+	@mkdir -p docs/img
+	./$(BUILD)/freax-desktop --screenshot docs/img
+
+$(BUILD)/freax-sim: $(CORE_OBJS) $(CTX_OBJS) $(APP_OBJS) $(MOD_LIB)
+	@mkdir -p $(dir $@)
+	@echo "==> liaison simulateur / linking simulator"
+	$(CC) -no-pie -o $@ $(APP_OBJS) $(CORE_OBJS) $(CTX_OBJS) $(MOD_LIB)
+
+$(BUILD)/freax-tests: $(CORE_OBJS) $(CTX_OBJS) $(DESK_CORE_OBJS) $(TEST_OBJS) \
+                      $(MOD_LIB)
+	@echo "==> liaison tests / linking tests"
+	$(CC) -no-pie -o $@ $(TEST_OBJS) $(CORE_OBJS) $(CTX_OBJS) \
+	      $(DESK_CORE_OBJS) $(MOD_LIB)
+
+$(BUILD)/freax-i386.elf: $(BM_OBJS) baremetal/linker.ld
+	@echo "==> liaison noyau bare-metal i386 / linking bare-metal kernel"
+	$(CC) -m32 -nostdlib -no-pie -Wl,-T,baremetal/linker.ld \
+	      -Wl,--build-id=none -o $@ $(BM_OBJS)
+
+HAL_HOST_OBJ := $(BUILD)/sim/sim/hal_host.o
+
+$(BUILD)/freax-desktop: $(DESK_APP_OBJS) $(DESK_CORE_OBJS) $(CORE_OBJS) \
+                        $(CTX_OBJS) $(HAL_HOST_OBJ) $(MOD_LIB)
+	@echo "==> liaison bureau / linking desktop"
+	$(CC) -no-pie -o $@ $(DESK_APP_OBJS) $(DESK_CORE_OBJS) $(CORE_OBJS) \
+	      $(CTX_OBJS) $(HAL_HOST_OBJ) $(MOD_LIB) -ldl
+
+# ---------- règles de compilation / compile rules ----------
+
+$(BUILD)/sim/%.o: %.c
+	@mkdir -p $(dir $@)
+	$(CC) $(SIMFLAGS) -DFREAX_ARCH=\"hosted-sim\" -c $< -o $@
+
+$(BUILD)/test/%.o: %.c
+	@mkdir -p $(dir $@)
+	$(CC) $(CFLAGS) -O2 -c $< -o $@
+
+$(BUILD)/bm/%.o: %.c
+	@mkdir -p $(dir $@)
+	$(CC) $(BMFLAGS) -DFREAX_BAREMETAL=1 -DFREAX_ARCH=\"i386-baremetal\" -c $< -o $@
+
+$(BUILD)/bm/%.o: %.S
+	@mkdir -p $(dir $@)
+	$(CC) -m32 -c $< -o $@
+
+$(BUILD)/desk/%.o: %.c
+	@mkdir -p $(dir $@)
+	$(CC) $(CFLAGS) -O2 -DFREAX_ARCH=\"hosted-desktop\" -c $< -o $@
+
+# ---------- module rust / rust module ----------
+
+$(RUST_LIB):
+	@echo "==> compilation du module Rust / building the Rust module"
+	cargo build --release --offline --manifest-path rust/freax_rust/Cargo.toml
+
+# ---------- exécution / runs ----------
+
+run-sim: $(BUILD)/freax-sim
+	./$(BUILD)/freax-sim
+
+run: $(BUILD)/freax-i386.elf
+ifndef QEMU
+	@echo "qemu-system-i386 introuvable / not found — installez QEMU / install QEMU"
+	@exit 1
+else
+	$(QEMU) -kernel $(BUILD)/freax-i386.elf -serial stdio
+endif
+
+smoke: $(BUILD)/freax-i386.elf
+ifndef QEMU
+	@echo "qemu-system-i386 introuvable / not found — test ignoré / test skipped"
+	@exit 0
+else
+	@echo "==> boot bare-metal sans écran / headless bare-metal boot"
+	@timeout 8 $(QEMU) -kernel $(BUILD)/freax-i386.elf -display none \
+	    -serial file:$(BUILD)/smoke.log -no-reboot \
+	    -device isa-debug-exit,iobase=0xf4,iosize=0x04 || true
+	@grep -q "FreaxOS 2026" $(BUILD)/smoke.log && \
+	    echo "SMOKE OK : bannière reçue sur COM1 / banner received on COM1" || \
+	    ( echo "SMOKE FAILED"; exit 1 )
+endif
+
+# ---------- packaging ----------
+
+zip: $(BUILD)/freax-sim
+	@echo "==> création de l'archive / building archive"
+	zip -r $(ZIPNAME) . -x "$(BUILD)/*" \
+	    "rust/freax_rust/target/*" "*.o" ".git/*" "*.elf" "*.ppm" \
+	    "tests/report.txt" > /dev/null
+	@echo "    -> $(ZIPNAME)"
+
+clean:
+	rm -rf $(BUILD) rust/freax_rust/target $(ZIPNAME)
+	@echo "==> propre / clean"
+
+help:
+	@echo "FreaxOS 2026 — cibles / targets:"
+	@echo "  make sim        simulateur terminal / hosted simulator  ($(BUILD)/freax-sim)"
+	@echo "  make test       tests unitaires / unit tests (hébergés)"
+	@echo "  make baremetal  noyau i386 multiboot / multiboot kernel ($(BUILD)/freax-i386.elf)"
+	@echo "  make desktop    bureau Liquid Glass (X11 via dlopen) / Liquid Glass desktop ($(BUILD)/freax-desktop)"
+	@echo "  make shot       captures du bureau en PPM / desktop screenshots ($(BUILD)/freax-desktop --screenshot)"
+	@echo "  make run        QEMU interactif / interactive QEMU ( VGA + COM1 )"
+	@echo "  make smoke      boot QEMU sans écran + grep bannière / headless boot test"
+	@echo "  make zip        archive source / source archive ($(ZIPNAME))"
+	@echo "  make clean      nettoie / clean"
+	@echo ""
+	@echo "détections / detected: gcc -m32 = $(HAVE_M32) | cargo = $(USE_RUST) | qemu = $(if $(QEMU),yes,no)"
+	@echo "FREAX_NO_RUST=1 : force le repli C / forces the C fallback"
+	@echo ""
+	@echo "exemples / examples:"
+	@echo "  ./$(BUILD)/freax-sim -c \"ls /proc\""
+	@echo "  ./$(BUILD)/freax-sim --script tests/demo.txt"
+	@echo "  ./$(BUILD)/freax-desktop                 bureau X11 / X11 desktop"
+	@echo "  ./$(BUILD)/freax-desktop --screenshot    captures PNG-PPM / screenshots"

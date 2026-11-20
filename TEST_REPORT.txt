@@ -1,0 +1,167 @@
+=== FreaxOS 2026 — rapport de build et de tests / build & test report ===
+date : 2026-11-20 05:19:46
+
+== outillage détecté / detected toolchain ==
+gcc (Debian 14.2.0-19) 14.2.0
+gcc -m32 : OK
+cargo : absent (repli C / C fallback)
+qemu-system-i386 : absent (make run/smoke à exécuter chez vous)
+
+== make clean ==
+rm -rf build rust/freax_rust/target FreaxOS-2026-v1.0.0.zip
+==> propre / clean
+
+== make all (sim + tests + desktop + baremetal + splash) ==
+cc -std=gnu11 -Wall -Wextra -Iinclude -Idesktop -DFREAX_BUILD_DATE=\"2026-11-20\" -O2 -ffreestanding -fno-builtin -fno-stack-protector -fno-pie -mno-mmx -mno-sse -DFREAX_ARCH=\"hosted-sim\" -c kernel/console.c -o build/sim/kernel/console.o
+cc -std=gnu11 -Wall -Wextra -Iinclude -Idesktop -DFREAX_BUILD_DATE=\"2026-11-20\" -O2 -ffreestanding -fno-builtin -fno-stack-protector -fno-pie -mno-mmx -mno-sse -DFREAX_ARCH=\"hosted-sim\" -c kernel/kernel.c -o build/sim/kernel/kernel.o
+cc -std=gnu11 -Wall -Wextra -Iinclude -Idesktop -DFREAX_BUILD_DATE=\"2026-11-20\" -O2 -ffreestanding -fno-builtin -fno-stack-protector -fno-pie -mno-mmx -mno-sse -DFREAX_ARCH=\"hosted-sim\" -c kernel/libc.c -o build/sim/kernel/libc.o
+cc -std=gnu11 -Wall -Wextra -Iinclude -Idesktop -DFREAX_BUILD_DATE=\"2026-11-20\" -O2 -ffreestanding -fno-builtin -fno-stack-protector -fno-pie -mno-mmx -mno-sse -DFREAX_ARCH=\"hosted-sim\" -c kernel/mm.c -o build/sim/kernel/mm.o
+cc -std=gnu11 -Wall -Wextra -Iinclude -Idesktop -DFREAX_BUILD_DATE=\"2026-11-20\" -O2 -ffreestanding -fno-builtin -fno-stack-protector -fno-pie -mno-mmx -mno-sse -DFREAX_ARCH=\"hosted-sim\" -c kernel/printk.c -o build/sim/kernel/printk.o
+cc -std=gnu11 -Wall -Wextra -Iinclude -Idesktop -DFREAX_BUILD_DATE=\"2026-11-20\" -O2 -ffreestanding -fno-builtin -fno-stack-protector -fno-pie -mno-mmx -mno-sse -DFREAX_ARCH=\"hosted-sim\" -c kernel/sched.c -o build/sim/kernel/sched.o
+cc -std=gnu11 -Wall -Wextra -Iinclude -Idesktop -DFREAX_BUILD_DATE=\"2026-11-20\" -O2 -ffreestanding -fno-builtin -fno-stack-protector -fno-pie -mno-mmx -mno-sse -DFREAX_ARCH=\"hosted-sim\" -c kernel/syscall.c -o build/sim/kernel/syscall.o
+cc -std=gnu11 -Wall -Wextra -Iinclude -Idesktop -DFREAX_BUILD_DATE=\"2026-11-20\" -O2 -ffreestanding -fno-builtin -fno-stack-protector -fno-pie -mno-mmx -mno-sse -DFREAX_ARCH=\"hosted-sim\" -c kernel/vfs.c -o build/sim/kernel/vfs.o
+cc -std=gnu11 -Wall -Wextra -Iinclude -Idesktop -DFREAX_BUILD_DATE=\"2026-11-20\" -O2 -ffreestanding -fno-builtin -fno-stack-protector -fno-pie -mno-mmx -mno-sse -DFREAX_ARCH=\"hosted-sim\" -c shell/commands.c -o build/sim/shell/commands.o
+cc -std=gnu11 -Wall -Wextra -Iinclude -Idesktop -DFREAX_BUILD_DATE=\"2026-11-20\" -O2 -ffreestanding -fno-builtin -fno-stack-protector -fno-pie -mno-mmx -mno-sse -DFREAX_ARCH=\"hosted-sim\" -c shell/eggs.c -o build/sim/shell/eggs.o
+cc -std=gnu11 -Wall -Wextra -Iinclude -Idesktop -DFREAX_BUILD_DATE=\"2026-11-20\" -O2 -ffreestanding -fno-builtin -fno-stack-protector -fno-pie -mno-mmx -mno-sse -DFREAX_ARCH=\"hosted-sim\" -c shell/shell.c -o build/sim/shell/shell.o
+cc -std=gnu11 -Wall -Wextra -Iinclude -Idesktop -DFREAX_BUILD_DATE=\"2026-11-20\" -O2 -ffreestanding -fno-builtin -fno-stack-protector -fno-pie -mno-mmx -mno-sse -DFREAX_ARCH=\"hosted-sim\" -c kernel/tux_stub.c -o build/sim/kernel/tux_stub.o
+cc -std=gnu11 -Wall -Wextra -Iinclude -Idesktop -DFREAX_BUILD_DATE=\"2026-11-20\" -O2 -ffreestanding -fno-builtin -fno-stack-protector -fno-pie -mno-mmx -mno-sse -DFREAX_ARCH=\"hosted-sim\" -c sim/ctx_ucontext.c -o build/sim/sim/ctx_ucontext.o
+cc -std=gnu11 -Wall -Wextra -Iinclude -Idesktop -DFREAX_BUILD_DATE=\"2026-11-20\" -O2 -ffreestanding -fno-builtin -fno-stack-protector -fno-pie -mno-mmx -mno-sse -DFREAX_ARCH=\"hosted-sim\" -c sim/hal_host.c -o build/sim/sim/hal_host.o
+cc -std=gnu11 -Wall -Wextra -Iinclude -Idesktop -DFREAX_BUILD_DATE=\"2026-11-20\" -O2 -ffreestanding -fno-builtin -fno-stack-protector -fno-pie -mno-mmx -mno-sse -DFREAX_ARCH=\"hosted-sim\" -c sim/sim_main.c -o build/sim/sim/sim_main.o
+==> liaison simulateur / linking simulator
+cc -no-pie -o build/freax-sim build/sim/sim/hal_host.o build/sim/sim/sim_main.o build/sim/kernel/console.o build/sim/kernel/kernel.o build/sim/kernel/libc.o build/sim/kernel/mm.o build/sim/kernel/printk.o build/sim/kernel/sched.o build/sim/kernel/syscall.o build/sim/kernel/vfs.o build/sim/shell/commands.o build/sim/shell/eggs.o build/sim/shell/shell.o build/sim/kernel/tux_stub.o build/sim/sim/ctx_ucontext.o 
+cc -std=gnu11 -Wall -Wextra -Iinclude -Idesktop -DFREAX_BUILD_DATE=\"2026-11-20\" -O2 -DFREAX_ARCH=\"hosted-desktop\" -c desktop/gfx.c -o build/desk/desktop/gfx.o
+cc -std=gnu11 -Wall -Wextra -Iinclude -Idesktop -DFREAX_BUILD_DATE=\"2026-11-20\" -O2 -DFREAX_ARCH=\"hosted-desktop\" -c desktop/font8x14.c -o build/desk/desktop/font8x14.o
+cc -std=gnu11 -Wall -Wextra -Iinclude -Idesktop -DFREAX_BUILD_DATE=\"2026-11-20\" -O2 -DFREAX_ARCH=\"hosted-desktop\" -c desktop/theme.c -o build/desk/desktop/theme.o
+cc -std=gnu11 -Wall -Wextra -Iinclude -Idesktop -DFREAX_BUILD_DATE=\"2026-11-20\" -O2 -DFREAX_ARCH=\"hosted-desktop\" -c desktop/html.c -o build/desk/desktop/html.o
+cc -std=gnu11 -Wall -Wextra -Iinclude -Idesktop -DFREAX_BUILD_DATE=\"2026-11-20\" -O2 -DFREAX_ARCH=\"hosted-desktop\" -c desktop/apps1.c -o build/desk/desktop/apps1.o
+cc -std=gnu11 -Wall -Wextra -Iinclude -Idesktop -DFREAX_BUILD_DATE=\"2026-11-20\" -O2 -DFREAX_ARCH=\"hosted-desktop\" -c desktop/apps2.c -o build/desk/desktop/apps2.o
+cc -std=gnu11 -Wall -Wextra -Iinclude -Idesktop -DFREAX_BUILD_DATE=\"2026-11-20\" -O2 -DFREAX_ARCH=\"hosted-desktop\" -c desktop/wm.c -o build/desk/desktop/wm.o
+cc -std=gnu11 -Wall -Wextra -Iinclude -Idesktop -DFREAX_BUILD_DATE=\"2026-11-20\" -O2 -c tests/test_cross.c -o build/test/tests/test_cross.o
+cc -std=gnu11 -Wall -Wextra -Iinclude -Idesktop -DFREAX_BUILD_DATE=\"2026-11-20\" -O2 -c tests/test_desktop.c -o build/test/tests/test_desktop.o
+cc -std=gnu11 -Wall -Wextra -Iinclude -Idesktop -DFREAX_BUILD_DATE=\"2026-11-20\" -O2 -c tests/test_main.c -o build/test/tests/test_main.o
+cc -std=gnu11 -Wall -Wextra -Iinclude -Idesktop -DFREAX_BUILD_DATE=\"2026-11-20\" -O2 -c tests/test_mm.c -o build/test/tests/test_mm.o
+cc -std=gnu11 -Wall -Wextra -Iinclude -Idesktop -DFREAX_BUILD_DATE=\"2026-11-20\" -O2 -c tests/test_printk.c -o build/test/tests/test_printk.o
+cc -std=gnu11 -Wall -Wextra -Iinclude -Idesktop -DFREAX_BUILD_DATE=\"2026-11-20\" -O2 -c tests/test_sched.c -o build/test/tests/test_sched.o
+cc -std=gnu11 -Wall -Wextra -Iinclude -Idesktop -DFREAX_BUILD_DATE=\"2026-11-20\" -O2 -c tests/test_shell.c -o build/test/tests/test_shell.o
+cc -std=gnu11 -Wall -Wextra -Iinclude -Idesktop -DFREAX_BUILD_DATE=\"2026-11-20\" -O2 -c tests/test_syscall.c -o build/test/tests/test_syscall.o
+cc -std=gnu11 -Wall -Wextra -Iinclude -Idesktop -DFREAX_BUILD_DATE=\"2026-11-20\" -O2 -c tests/test_vfs.c -o build/test/tests/test_vfs.o
+==> liaison tests / linking tests
+cc -no-pie -o build/freax-tests build/test/tests/test_cross.o build/test/tests/test_desktop.o build/test/tests/test_main.o build/test/tests/test_mm.o build/test/tests/test_printk.o build/test/tests/test_sched.o build/test/tests/test_shell.o build/test/tests/test_syscall.o build/test/tests/test_vfs.o build/sim/kernel/console.o build/sim/kernel/kernel.o build/sim/kernel/libc.o build/sim/kernel/mm.o build/sim/kernel/printk.o build/sim/kernel/sched.o build/sim/kernel/syscall.o build/sim/kernel/vfs.o build/sim/shell/commands.o build/sim/shell/eggs.o build/sim/shell/shell.o build/sim/kernel/tux_stub.o build/sim/sim/ctx_ucontext.o \
+      build/desk/desktop/gfx.o build/desk/desktop/font8x14.o build/desk/desktop/theme.o build/desk/desktop/html.o build/desk/desktop/apps1.o build/desk/desktop/apps2.o build/desk/desktop/wm.o 
+==> exécution des tests unitaires / running unit tests
+FreaxOS 2026 — tests unitaires / unit tests
+
+== suite mm ==
+   -> OK
+
+== suite sched ==
+   -> OK
+
+== suite vfs ==
+   -> OK
+
+== suite syscall ==
+   -> OK
+
+== suite shell ==
+   -> OK
+
+== suite printk ==
+   -> OK
+
+== suite cross ==
+   -> OK
+
+== suite desktop ==
+   -> OK
+
+== bilan / summary : 398 OK, 0 KO / FAIL ==
+cc -std=gnu11 -Wall -Wextra -Iinclude -Idesktop -DFREAX_BUILD_DATE=\"2026-11-20\" -O2 -DFREAX_ARCH=\"hosted-desktop\" -c desktop/desktop_main.c -o build/desk/desktop/desktop_main.o
+cc -std=gnu11 -Wall -Wextra -Iinclude -Idesktop -DFREAX_BUILD_DATE=\"2026-11-20\" -O2 -DFREAX_ARCH=\"hosted-desktop\" -c desktop/x11_host.c -o build/desk/desktop/x11_host.o
+==> liaison bureau / linking desktop
+cc -no-pie -o build/freax-desktop build/desk/desktop/desktop_main.o build/desk/desktop/x11_host.o build/desk/desktop/gfx.o build/desk/desktop/font8x14.o build/desk/desktop/theme.o build/desk/desktop/html.o build/desk/desktop/apps1.o build/desk/desktop/apps2.o build/desk/desktop/wm.o build/sim/kernel/console.o build/sim/kernel/kernel.o build/sim/kernel/libc.o build/sim/kernel/mm.o build/sim/kernel/printk.o build/sim/kernel/sched.o build/sim/kernel/syscall.o build/sim/kernel/vfs.o build/sim/shell/commands.o build/sim/shell/eggs.o build/sim/shell/shell.o build/sim/kernel/tux_stub.o \
+      build/sim/sim/ctx_ucontext.o build/sim/sim/hal_host.o  -ldl
+cc -std=gnu11 -Wall -Wextra -Iinclude -Idesktop -DFREAX_BUILD_DATE=\"2026-11-20\" -O2 -m32 -ffreestanding -fno-builtin -fno-pic -fno-pie -fno-stack-protector -mno-mmx -mno-sse -mno-80387 -fno-asynchronous-unwind-tables -DFREAX_BAREMETAL=1 -DFREAX_ARCH=\"i386-baremetal\" -c kernel/console.c -o build/bm/kernel/console.o
+cc -std=gnu11 -Wall -Wextra -Iinclude -Idesktop -DFREAX_BUILD_DATE=\"2026-11-20\" -O2 -m32 -ffreestanding -fno-builtin -fno-pic -fno-pie -fno-stack-protector -mno-mmx -mno-sse -mno-80387 -fno-asynchronous-unwind-tables -DFREAX_BAREMETAL=1 -DFREAX_ARCH=\"i386-baremetal\" -c kernel/kernel.c -o build/bm/kernel/kernel.o
+cc -std=gnu11 -Wall -Wextra -Iinclude -Idesktop -DFREAX_BUILD_DATE=\"2026-11-20\" -O2 -m32 -ffreestanding -fno-builtin -fno-pic -fno-pie -fno-stack-protector -mno-mmx -mno-sse -mno-80387 -fno-asynchronous-unwind-tables -DFREAX_BAREMETAL=1 -DFREAX_ARCH=\"i386-baremetal\" -c kernel/libc.c -o build/bm/kernel/libc.o
+cc -std=gnu11 -Wall -Wextra -Iinclude -Idesktop -DFREAX_BUILD_DATE=\"2026-11-20\" -O2 -m32 -ffreestanding -fno-builtin -fno-pic -fno-pie -fno-stack-protector -mno-mmx -mno-sse -mno-80387 -fno-asynchronous-unwind-tables -DFREAX_BAREMETAL=1 -DFREAX_ARCH=\"i386-baremetal\" -c kernel/mm.c -o build/bm/kernel/mm.o
+cc -std=gnu11 -Wall -Wextra -Iinclude -Idesktop -DFREAX_BUILD_DATE=\"2026-11-20\" -O2 -m32 -ffreestanding -fno-builtin -fno-pic -fno-pie -fno-stack-protector -mno-mmx -mno-sse -mno-80387 -fno-asynchronous-unwind-tables -DFREAX_BAREMETAL=1 -DFREAX_ARCH=\"i386-baremetal\" -c kernel/printk.c -o build/bm/kernel/printk.o
+cc -std=gnu11 -Wall -Wextra -Iinclude -Idesktop -DFREAX_BUILD_DATE=\"2026-11-20\" -O2 -m32 -ffreestanding -fno-builtin -fno-pic -fno-pie -fno-stack-protector -mno-mmx -mno-sse -mno-80387 -fno-asynchronous-unwind-tables -DFREAX_BAREMETAL=1 -DFREAX_ARCH=\"i386-baremetal\" -c kernel/sched.c -o build/bm/kernel/sched.o
+cc -std=gnu11 -Wall -Wextra -Iinclude -Idesktop -DFREAX_BUILD_DATE=\"2026-11-20\" -O2 -m32 -ffreestanding -fno-builtin -fno-pic -fno-pie -fno-stack-protector -mno-mmx -mno-sse -mno-80387 -fno-asynchronous-unwind-tables -DFREAX_BAREMETAL=1 -DFREAX_ARCH=\"i386-baremetal\" -c kernel/syscall.c -o build/bm/kernel/syscall.o
+cc -std=gnu11 -Wall -Wextra -Iinclude -Idesktop -DFREAX_BUILD_DATE=\"2026-11-20\" -O2 -m32 -ffreestanding -fno-builtin -fno-pic -fno-pie -fno-stack-protector -mno-mmx -mno-sse -mno-80387 -fno-asynchronous-unwind-tables -DFREAX_BAREMETAL=1 -DFREAX_ARCH=\"i386-baremetal\" -c kernel/vfs.c -o build/bm/kernel/vfs.o
+cc -std=gnu11 -Wall -Wextra -Iinclude -Idesktop -DFREAX_BUILD_DATE=\"2026-11-20\" -O2 -m32 -ffreestanding -fno-builtin -fno-pic -fno-pie -fno-stack-protector -mno-mmx -mno-sse -mno-80387 -fno-asynchronous-unwind-tables -DFREAX_BAREMETAL=1 -DFREAX_ARCH=\"i386-baremetal\" -c shell/commands.c -o build/bm/shell/commands.o
+cc -std=gnu11 -Wall -Wextra -Iinclude -Idesktop -DFREAX_BUILD_DATE=\"2026-11-20\" -O2 -m32 -ffreestanding -fno-builtin -fno-pic -fno-pie -fno-stack-protector -mno-mmx -mno-sse -mno-80387 -fno-asynchronous-unwind-tables -DFREAX_BAREMETAL=1 -DFREAX_ARCH=\"i386-baremetal\" -c shell/eggs.c -o build/bm/shell/eggs.o
+cc -std=gnu11 -Wall -Wextra -Iinclude -Idesktop -DFREAX_BUILD_DATE=\"2026-11-20\" -O2 -m32 -ffreestanding -fno-builtin -fno-pic -fno-pie -fno-stack-protector -mno-mmx -mno-sse -mno-80387 -fno-asynchronous-unwind-tables -DFREAX_BAREMETAL=1 -DFREAX_ARCH=\"i386-baremetal\" -c shell/shell.c -o build/bm/shell/shell.o
+cc -std=gnu11 -Wall -Wextra -Iinclude -Idesktop -DFREAX_BUILD_DATE=\"2026-11-20\" -O2 -m32 -ffreestanding -fno-builtin -fno-pic -fno-pie -fno-stack-protector -mno-mmx -mno-sse -mno-80387 -fno-asynchronous-unwind-tables -DFREAX_BAREMETAL=1 -DFREAX_ARCH=\"i386-baremetal\" -c kernel/tux_stub.c -o build/bm/kernel/tux_stub.o
+cc -std=gnu11 -Wall -Wextra -Iinclude -Idesktop -DFREAX_BUILD_DATE=\"2026-11-20\" -O2 -m32 -ffreestanding -fno-builtin -fno-pic -fno-pie -fno-stack-protector -mno-mmx -mno-sse -mno-80387 -fno-asynchronous-unwind-tables -DFREAX_BAREMETAL=1 -DFREAX_ARCH=\"i386-baremetal\" -c baremetal/ctx_i386.c -o build/bm/baremetal/ctx_i386.o
+cc -std=gnu11 -Wall -Wextra -Iinclude -Idesktop -DFREAX_BUILD_DATE=\"2026-11-20\" -O2 -m32 -ffreestanding -fno-builtin -fno-pic -fno-pie -fno-stack-protector -mno-mmx -mno-sse -mno-80387 -fno-asynchronous-unwind-tables -DFREAX_BAREMETAL=1 -DFREAX_ARCH=\"i386-baremetal\" -c baremetal/hal_i386.c -o build/bm/baremetal/hal_i386.o
+cc -std=gnu11 -Wall -Wextra -Iinclude -Idesktop -DFREAX_BUILD_DATE=\"2026-11-20\" -O2 -m32 -ffreestanding -fno-builtin -fno-pic -fno-pie -fno-stack-protector -mno-mmx -mno-sse -mno-80387 -fno-asynchronous-unwind-tables -DFREAX_BAREMETAL=1 -DFREAX_ARCH=\"i386-baremetal\" -c baremetal/interrupts.c -o build/bm/baremetal/interrupts.o
+cc -std=gnu11 -Wall -Wextra -Iinclude -Idesktop -DFREAX_BUILD_DATE=\"2026-11-20\" -O2 -m32 -ffreestanding -fno-builtin -fno-pic -fno-pie -fno-stack-protector -mno-mmx -mno-sse -mno-80387 -fno-asynchronous-unwind-tables -DFREAX_BAREMETAL=1 -DFREAX_ARCH=\"i386-baremetal\" -c baremetal/main.c -o build/bm/baremetal/main.o
+cc -std=gnu11 -Wall -Wextra -Iinclude -Idesktop -DFREAX_BUILD_DATE=\"2026-11-20\" -O2 -m32 -ffreestanding -fno-builtin -fno-pic -fno-pie -fno-stack-protector -mno-mmx -mno-sse -mno-80387 -fno-asynchronous-unwind-tables -DFREAX_BAREMETAL=1 -DFREAX_ARCH=\"i386-baremetal\" -c baremetal/splash.c -o build/bm/baremetal/splash.o
+cc -m32 -c baremetal/boot.S -o build/bm/baremetal/boot.o
+cc -m32 -c baremetal/isr.S -o build/bm/baremetal/isr.o
+cc -std=gnu11 -Wall -Wextra -Iinclude -Idesktop -DFREAX_BUILD_DATE=\"2026-11-20\" -O2 -m32 -ffreestanding -fno-builtin -fno-pic -fno-pie -fno-stack-protector -mno-mmx -mno-sse -mno-80387 -fno-asynchronous-unwind-tables -DFREAX_BAREMETAL=1 -DFREAX_ARCH=\"i386-baremetal\" -c desktop/gfx.c -o build/bm/desktop/gfx.o
+cc -std=gnu11 -Wall -Wextra -Iinclude -Idesktop -DFREAX_BUILD_DATE=\"2026-11-20\" -O2 -m32 -ffreestanding -fno-builtin -fno-pic -fno-pie -fno-stack-protector -mno-mmx -mno-sse -mno-80387 -fno-asynchronous-unwind-tables -DFREAX_BAREMETAL=1 -DFREAX_ARCH=\"i386-baremetal\" -c desktop/font8x14.c -o build/bm/desktop/font8x14.o
+==> liaison noyau bare-metal i386 / linking bare-metal kernel
+cc -m32 -nostdlib -no-pie -Wl,-T,baremetal/linker.ld \
+      -Wl,--build-id=none -o build/freax-i386.elf build/bm/kernel/console.o build/bm/kernel/kernel.o build/bm/kernel/libc.o build/bm/kernel/mm.o build/bm/kernel/printk.o build/bm/kernel/sched.o build/bm/kernel/syscall.o build/bm/kernel/vfs.o build/bm/shell/commands.o build/bm/shell/eggs.o build/bm/shell/shell.o build/bm/kernel/tux_stub.o build/bm/baremetal/ctx_i386.o build/bm/baremetal/hal_i386.o build/bm/baremetal/interrupts.o build/bm/baremetal/main.o build/bm/baremetal/splash.o build/bm/baremetal/boot.o build/bm/baremetal/isr.o build/bm/desktop/gfx.o build/bm/desktop/font8x14.o
+
+== make test ==
+==> exécution des tests unitaires / running unit tests
+FreaxOS 2026 — tests unitaires / unit tests
+
+== suite mm ==
+   -> OK
+
+== suite sched ==
+   -> OK
+
+== suite vfs ==
+   -> OK
+
+== suite syscall ==
+   -> OK
+
+== suite shell ==
+   -> OK
+
+== suite printk ==
+   -> OK
+
+== suite cross ==
+   -> OK
+
+== suite desktop ==
+   -> OK
+
+== bilan / summary : 398 OK, 0 KO / FAIL ==
+
+== make shot (captures du bureau / desktop screenshots) ==
+./build/freax-desktop --screenshot docs/img
+[1;36m ____                 ___  ___  ____ 
+|  _ \ _ __ ___  ___ / _ \/ _ \/ ___|
+| | | | '__/ _ \/ _ \ | | | | | \___ \
+| |_| | | |  __/  __/ |_| | |_| |___) |
+|____/|_|  \___|\___|\__\_\___/|____/ 
+[0mFreaxOS 2026 v1.0.0-freax (freax) — the 0.12 spirit, rebuilt for developers
+Inspire du noyau Linux 0.12 (GNU GPL, fevrier 1992).
+Inspired by the Linux 0.12 kernel (GNU GPL, February 1992).
+Build 2026-11-20 | plateforme : hosted simulator
+Module : FreaxCore C (fallback) - compilez avec cargo pour Rust
+
+  screenshot -> docs/img/desktop-01-bureau-liquid-glass.ppm
+  screenshot -> docs/img/desktop-02-launcher.ppm
+  screenshot -> docs/img/desktop-03-navigateur.ppm
+  screenshot -> docs/img/desktop-04-boutique.ppm
+  screenshot -> docs/img/desktop-05-reglages-mint.ppm
+  screenshot -> docs/img/desktop-06-dark-pro-en.ppm
+
+Nettoyage / cleanup : taches (tasks), vfs, rapport memoire...
+Fuites restantes / remaining leaks : 1 bloc(s)
+Pic memoire / memory peak : 43952 / 8388608 octets | allocs=82 frees=81
+
+== état final / final state ==
+-rwxr-xr-x 1 z z 141K Nov 20 05:19 build/freax-desktop
+-rwxr-xr-x 1 z z  70K Nov 20 05:19 build/freax-i386.elf
+-rwxr-xr-x 1 z z  61K Nov 20 05:19 build/freax-sim
+-rwxr-xr-x 1 z z 160K Nov 20 05:19 build/freax-tests
