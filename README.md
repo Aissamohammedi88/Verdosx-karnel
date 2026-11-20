@@ -70,6 +70,23 @@ cargo build --release
 make iso
 
 🤝 Contribuer
+. Démarrer en VM avant la clé USB
+Bash
+
+cd ~/FreaxOS
+make clean && make all          # build complet (sim + tests + desktop + noyau i386)
+qemu-system-i386 -kernel build/freax-i386.elf -m 32M -serial stdio
+                                # → splash graphique, puis shell texte
+./build/freax-desktop           # le bureau interactif en fenêtre X11
+./run_freax.sh --desktop        # tout-en-un : build + tests + bureau
+
+Clé USB (une fois validée en VM) :
+Bash
+
+make iso 2>/dev/null || { mkdir -p iso/boot/grub; cp build/freax-i386.elf iso/boot/
+printf 'set timeout=0\nmenuentry "FreaxOS 2026" {\n  multiboot /boot/freax-i386.elf\n  boot\n}\n' > iso/boot/grub/grub.cfg
+grub-mkrescue -o freax.iso iso/; }
+sudo dd if=freax.iso of=/dev/sdX bs=4M status=progress && sync
 
 Si vous en avez marre de Windows et de ses mises à jour forcées, rejoignez le mouvement.
 📜 Licence
